@@ -1,336 +1,393 @@
-import React, { useState, useMemo } from 'react';
-import { Minus, Plus, RefreshCcw, Trophy, AlertTriangle, CheckCircle, PartyPopper } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penghitung Suara OSIS - SMPN Suator</title>
+    
+    <!-- Memuat Tailwind CSS untuk desain (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Memuat React & ReactDOM (via CDN) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Memuat Babel agar browser mengenali kode JSX/React -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-const INITIAL_CANDIDATES = [
-  { id: 1, name: "ADAM DAIYO & JHON NAMBUL", votes: 0, color: "bg-red-500", textCol: "text-red-700", image: "https://i.imgur.com/31ZQkx0.png" },
-  { id: 2, name: "GREGORIANA WEMEBIS & BILLY BOHOJI", votes: 0, color: "bg-blue-500", textCol: "text-blue-700", image: "https://i.imgur.com/hs7LJEy.png" },
-  { id: 3, name: "TOBIAS KAIMETI & ARFIAN DASMAR", votes: 0, color: "bg-emerald-500", textCol: "text-emerald-700", image: "https://i.imgur.com/6lONO9n.png" },
-  { id: 4, name: "ADELIA AULIA AWAK & YULIANA KASIME", votes: 0, color: "bg-yellow-500", textCol: "text-yellow-700", image: "https://i.imgur.com/PsypcP1.png" },
-  { id: 5, name: "NATALIA ATEN WAREM & BAYUN SAMUDERA RADHA", votes: 0, color: "bg-purple-500", textCol: "text-purple-700", image: "https://i.imgur.com/stDrac2.png" },
-  { id: 6, name: "MARLINA BOHOJI & HELINA SINANGGATUN", votes: 0, color: "bg-pink-500", textCol: "text-pink-700", image: "https://i.imgur.com/5Us31WY.png" },
-  { id: 7, name: "NUEL BISURKAP & ROY JURASAMUR", votes: 0, color: "bg-indigo-500", textCol: "text-indigo-700", image: "https://i.imgur.com/yF0oHII.png" },
-];
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #e2e8f0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-// Komponen kanggo nggambar 1 blok Turus (1-5 garis)
-const TallyMark = ({ count }) => {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-gray-800 mx-[1px] my-0.5">
-      {count >= 1 && <line x1="4" y1="4" x2="4" y2="20" />}
-      {count >= 2 && <line x1="8" y1="4" x2="8" y2="20" />}
-      {count >= 3 && <line x1="12" y1="4" x2="12" y2="20" />}
-      {count >= 4 && <line x1="16" y1="4" x2="16" y2="20" />}
-      {count >= 5 && <line x1="2" y1="18" x2="18" y2="6" stroke="#ef4444" strokeWidth="3" />}
-    </svg>
-  );
-};
+    <script type="text/babel">
+        const { useState, useMemo } = React;
 
-// Komponen Container untuk Turus
-const TurusDisplay = ({ votes }) => {
-  const fives = Math.floor(votes / 5);
-  const remainder = votes % 5;
-  const tallies = [];
+        // --- IKON-IKON (Menggantikan library eksternal agar bisa jalan di 1 file) ---
+        const Minus = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        );
+        const Plus = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        );
+        const RefreshCcw = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+        );
+        const Trophy = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+        );
+        const AlertTriangle = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        );
+        const CheckCircle = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        );
+        const PartyPopper = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5.8 11.3 2 22l10.7-3.79"></path><path d="M4 3h.01"></path><path d="M22 8h.01"></path><path d="M15 2h.01"></path><path d="M22 20h.01"></path><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"></path><path d="m22 13-.82-.33c-.86-.35-1.85.46-1.59 1.35v0c.16.54-.15 1.1-.7 1.28L18 16"></path><path d="m11 11-.45-.6a2.03 2.03 0 0 0-2.8-.57l0 0c-.8.56-1.92.2-2.31-.72L5 8.5"></path></svg>
+        );
 
-  for (let i = 0; i < fives; i++) {
-    tallies.push(<TallyMark key={`five-${i}`} count={5} />);
-  }
-  if (remainder > 0) {
-    tallies.push(<TallyMark key="rem" count={remainder} />);
-  }
+        // --- DATA AWAL ---
+        const INITIAL_CANDIDATES = [
+            { id: 1, name: "ADAM DAIYO & JHON NAMBUL", votes: 0, color: "bg-red-500", textCol: "text-red-700", image: "https://i.imgur.com/31ZQkx0.png" },
+            { id: 2, name: "GREGORIANA WEMEBIS & BILLY BOHOJI", votes: 0, color: "bg-blue-500", textCol: "text-blue-700", image: "https://i.imgur.com/hs7LJEy.png" },
+            { id: 3, name: "TOBIAS KAIMETI & ARFIAN DASMAR", votes: 0, color: "bg-emerald-500", textCol: "text-emerald-700", image: "https://i.imgur.com/6lONO9n.png" },
+            { id: 4, name: "ADELIA AULIA AWAK & YULIANA KASIME", votes: 0, color: "bg-yellow-500", textCol: "text-yellow-700", image: "https://i.imgur.com/PsypcP1.png" },
+            { id: 5, name: "NATALIA ATEN WAREM & BAYUN SAMUDERA RADHA", votes: 0, color: "bg-purple-500", textCol: "text-purple-700", image: "https://i.imgur.com/stDrac2.png" },
+            { id: 6, name: "MARLINA BOHOJI & HELINA SINANGGATUN", votes: 0, color: "bg-pink-500", textCol: "text-pink-700", image: "https://i.imgur.com/5Us31WY.png" },
+            { id: 7, name: "NUEL BISURKAP & ROY JURASAMUR", votes: 0, color: "bg-indigo-500", textCol: "text-indigo-700", image: "https://i.imgur.com/yF0oHII.png" },
+        ];
 
-  return (
-    <div className="flex flex-wrap mt-1 p-1.5 bg-slate-50 rounded border border-gray-200 flex-1 overflow-y-auto content-start shadow-inner min-h-0">
-      {tallies.length > 0 ? (
-        tallies
-      ) : (
-        <span className="text-gray-400 italic text-xs m-auto">Belum ada</span>
-      )}
-    </div>
-  );
-};
+        // --- KOMPONEN TURUS ---
+        const TallyMark = ({ count }) => {
+            return (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-gray-800 mx-[1px] my-0.5">
+                {count >= 1 && <line x1="4" y1="4" x2="4" y2="20" />}
+                {count >= 2 && <line x1="8" y1="4" x2="8" y2="20" />}
+                {count >= 3 && <line x1="12" y1="4" x2="12" y2="20" />}
+                {count >= 4 && <line x1="16" y1="4" x2="16" y2="20" />}
+                {count >= 5 && <line x1="2" y1="18" x2="18" y2="6" stroke="#ef4444" strokeWidth="3" />}
+                </svg>
+            );
+        };
 
-export default function App() {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [showFinishModal, setShowFinishModal] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
+        const TurusDisplay = ({ votes }) => {
+            const fives = Math.floor(votes / 5);
+            const remainder = votes % 5;
+            const tallies = [];
 
-  const handleAddVote = (id) => {
-    setCandidates(candidates.map(c => c.id === id ? { ...c, votes: c.votes + 1 } : c));
-  };
+            for (let i = 0; i < fives; i++) {
+                tallies.push(<TallyMark key={`five-${i}`} count={5} />);
+            }
+            if (remainder > 0) {
+                tallies.push(<TallyMark key="rem" count={remainder} />);
+            }
 
-  const handleRemoveVote = (id) => {
-    setCandidates(candidates.map(c => c.id === id && c.votes > 0 ? { ...c, votes: c.votes - 1 } : c));
-  };
-
-  const handleReset = () => {
-    setCandidates(INITIAL_CANDIDATES);
-    setShowResetModal(false);
-    setIsFinished(false);
-  };
-
-  const handleFinish = () => {
-    setIsFinished(true);
-    setShowFinishModal(false);
-  };
-
-  const totalVotes = candidates.reduce((acc, curr) => acc + curr.votes, 0);
-  const maxVotes = useMemo(() => Math.max(...candidates.map(c => c.votes)), [candidates]);
-  
-  // Goleki sing unggul sauntara (bisa luwih saka 1 yen seri)
-  const leaders = useMemo(() => {
-    if (maxVotes === 0) return [];
-    return candidates.filter(c => c.votes === maxVotes);
-  }, [candidates, maxVotes]);
-
-  return (
-    <div className="h-screen w-screen bg-slate-200 text-slate-800 font-sans p-2 flex flex-col overflow-hidden">
-      
-      {/* Header Section Compact */}
-      <header className="flex-shrink-0 bg-white rounded-lg shadow-sm py-2 px-4 mb-2 border-l-4 border-blue-600 flex justify-between items-center">
-        <div className="flex flex-col">
-          <h1 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight">
-            PEMILIHAN KETUA & WAKIL KETUA OSIS SMPN SUATOR
-          </h1>
-          <p className="text-xs md:text-sm font-bold text-blue-700">Periode 2026 - 2027</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-50 px-3 py-1 rounded-md border border-blue-100 flex items-center gap-2">
-            <span className="text-xs text-blue-600 font-semibold uppercase">Total Suara:</span>
-            <span className="text-xl font-bold text-blue-900">{totalVotes}</span>
-          </div>
-          <button 
-            onClick={() => setShowFinishModal(true)}
-            disabled={totalVotes === 0}
-            className="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-md border border-green-200 transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircle size={16} />
-            Selesai
-          </button>
-          <button 
-            onClick={() => setShowResetModal(true)}
-            className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md border border-red-100 transition-colors font-semibold text-sm"
-          >
-            <RefreshCcw size={16} />
-            Reset
-          </button>
-        </div>
-      </header>
-
-      <div className="flex-1 flex gap-2 min-h-0">
-        
-        {/* Kolom Kiri: Area Input & Turus (Grid 4x2) */}
-        <div className="w-3/4 grid grid-cols-4 grid-rows-2 gap-2 h-full">
-          {candidates.map((candidate) => (
-            <div key={candidate.id} className="bg-white rounded-lg shadow-sm p-2 border border-slate-100 flex flex-col h-full overflow-hidden">
-              
-              {/* Info Kandidat Compact mawa Foto */}
-              <div className="flex items-center gap-2 mb-1">
-                <div className="relative flex-shrink-0">
-                  <img 
-                    src={candidate.image} 
-                    alt={candidate.name} 
-                    className="w-10 h-10 object-cover rounded-full border-2 border-slate-200 shadow-sm"
-                    onError={(e) => { e.target.src = 'https://via.placeholder.com/40?text=Foto'; }}
-                  />
-                  <span className={`absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] rounded-full font-bold text-white shadow-sm ${candidate.color}`}>
-                    0{candidate.id}
-                  </span>
+            return (
+                <div className="flex flex-wrap mt-1 p-1.5 bg-slate-50 rounded border border-gray-200 flex-1 overflow-y-auto content-start shadow-inner min-h-0">
+                {tallies.length > 0 ? (
+                    tallies
+                ) : (
+                    <span className="text-gray-400 italic text-xs m-auto">Belum ada</span>
+                )}
                 </div>
-                <h4 className="font-bold text-[10px] md:text-[11px] leading-tight line-clamp-2" title={candidate.name}>
-                  {candidate.name}
-                </h4>
-              </div>
+            );
+        };
 
-              {/* Kontrol Swara Compact */}
-              <div className="flex items-center justify-between bg-slate-50 p-1 rounded border mb-1">
-                <button 
-                  onClick={() => handleRemoveVote(candidate.id)}
-                  disabled={candidate.votes === 0}
-                  className="p-1 rounded bg-white border shadow-sm text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
-                >
-                  <Minus size={14} />
-                </button>
-                <span className="text-lg font-black leading-none">{candidate.votes}</span>
-                <button 
-                  onClick={() => handleAddVote(candidate.id)}
-                  className="p-1 rounded bg-white border shadow-sm text-green-600 hover:bg-green-50 transition-colors"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
+        // --- KOMPONEN UTAMA APLIKASI ---
+        function App() {
+            const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
+            const [showResetModal, setShowResetModal] = useState(false);
+            const [showFinishModal, setShowFinishModal] = useState(false);
+            const [isFinished, setIsFinished] = useState(false);
 
-              {/* Tampilan Turus */}
-              <TurusDisplay votes={candidate.votes} />
-            </div>
-          ))}
+            const handleAddVote = (id) => {
+                setCandidates(candidates.map(c => c.id === id ? { ...c, votes: c.votes + 1 } : c));
+            };
 
-          {/* Slot ke-8: Status Pemimpin Sauntara */}
-          <div className="bg-amber-50 rounded-lg shadow-sm p-3 border border-amber-200 flex flex-col h-full overflow-hidden">
-            <div className="flex items-center gap-1.5 text-amber-800 font-bold mb-2 pb-1 border-b border-amber-200">
-              <Trophy size={16} />
-              <span className="text-sm">Unggul Sementara</span>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {totalVotes > 0 ? (
-                <ul className="space-y-1.5">
-                  {leaders.map(l => (
-                    <li key={`leader-${l.id}`} className="text-xs font-semibold text-amber-900 flex items-start gap-1.5 leading-tight">
-                      <span className={`flex-shrink-0 mt-0.5 w-2 h-2 rounded-full ${l.color}`}></span>
-                      <span>0{l.id}. {l.name} ({l.votes})</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="text-xs text-amber-600/70 italic">Belum ada suara masuk</span>
-              )}
-            </div>
-          </div>
-        </div>
+            const handleRemoveVote = (id) => {
+                setCandidates(candidates.map(c => c.id === id && c.votes > 0 ? { ...c, votes: c.votes - 1 } : c));
+            };
 
-        {/* Kolom Kanan: Diagram Batang */}
-        <div className="w-1/4 bg-white rounded-lg shadow-sm p-3 border border-slate-100 flex flex-col h-full">
-          <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2 pb-2 border-b">
-            Diagram Hasil Suara
-          </h3>
-          
-          <div className="flex-1 flex flex-col justify-between py-1">
-            {candidates.map(c => {
-              const percentageMax = maxVotes === 0 ? 0 : (c.votes / maxVotes) * 100;
-              const percentageTotal = totalVotes === 0 ? 0 : (c.votes / totalVotes) * 100;
-              const isLeader = maxVotes > 0 && c.votes === maxVotes;
-              
-              return (
-                <div key={`chart-${c.id}`} className="group relative w-full">
-                  <div className="flex items-center justify-between text-[10px] md:text-xs mb-0.5 font-semibold">
-                    <div className="flex items-center gap-1.5 truncate pr-2">
-                       <img src={c.image} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                       <span className="truncate">0{c.id}. {c.name.split('&')[0].trim()}</span>
+            const handleReset = () => {
+                setCandidates(INITIAL_CANDIDATES);
+                setShowResetModal(false);
+                setIsFinished(false);
+            };
+
+            const handleFinish = () => {
+                setIsFinished(true);
+                setShowFinishModal(false);
+            };
+
+            const totalVotes = candidates.reduce((acc, curr) => acc + curr.votes, 0);
+            const maxVotes = useMemo(() => Math.max(...candidates.map(c => c.votes)), [candidates]);
+            
+            const leaders = useMemo(() => {
+                if (maxVotes === 0) return [];
+                return candidates.filter(c => c.votes === maxVotes);
+            }, [candidates, maxVotes]);
+
+            return (
+                <div className="h-screen w-screen bg-slate-200 text-slate-800 font-sans p-2 flex flex-col overflow-hidden">
+                
+                {/* Header Section Compact */}
+                <header className="flex-shrink-0 bg-white rounded-lg shadow-sm py-2 px-4 mb-2 border-l-4 border-blue-600 flex justify-between items-center">
+                    <div className="flex flex-col">
+                    <h1 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight">
+                        PEMILIHAN KETUA & WAKIL KETUA OSIS SMPN SUATOR
+                    </h1>
+                    <p className="text-xs md:text-sm font-bold text-blue-700">Periode 2026 - 2027</p>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-slate-500 font-mono">{percentageTotal.toFixed(1)}%</span>
-                      <span className={`${isLeader ? c.textCol : 'text-slate-600'} font-bold w-4 text-right`}>{c.votes}</span>
+                    
+                    <div className="flex items-center gap-3">
+                    <div className="bg-blue-50 px-3 py-1 rounded-md border border-blue-100 flex items-center gap-2">
+                        <span className="text-xs text-blue-600 font-semibold uppercase">Total Suara:</span>
+                        <span className="text-xl font-bold text-blue-900">{totalVotes}</span>
                     </div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-3 md:h-4 overflow-hidden border border-slate-200 shadow-inner">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end ${c.color} ${isLeader ? 'animate-pulse' : ''}`} 
-                      style={{ width: `${percentageMax}%` }}
+                    <button 
+                        onClick={() => setShowFinishModal(true)}
+                        disabled={totalVotes === 0}
+                        className="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded-md border border-green-200 transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+                        <CheckCircle size={16} />
+                        Selesai
+                    </button>
+                    <button 
+                        onClick={() => setShowResetModal(true)}
+                        className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md border border-red-100 transition-colors font-semibold text-sm"
+                    >
+                        <RefreshCcw size={16} />
+                        Reset
+                    </button>
                     </div>
-                  </div>
+                </header>
+
+                <div className="flex-1 flex gap-2 min-h-0">
+                    
+                    {/* Kolom Kiri: Area Input & Turus */}
+                    <div className="w-3/4 grid grid-cols-4 grid-rows-2 gap-2 h-full">
+                    {candidates.map((candidate) => (
+                        <div key={candidate.id} className="bg-white rounded-lg shadow-sm p-2 border border-slate-100 flex flex-col h-full overflow-hidden">
+                        
+                        {/* Info Kandidat Compact mawa Foto */}
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="relative flex-shrink-0">
+                            <img 
+                                src={candidate.image} 
+                                alt={candidate.name} 
+                                className="w-10 h-10 object-cover rounded-full border-2 border-slate-200 shadow-sm"
+                                onError={(e) => { e.target.src = 'https://via.placeholder.com/40?text=Foto'; }}
+                            />
+                            <span className={`absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] rounded-full font-bold text-white shadow-sm ${candidate.color}`}>
+                                0{candidate.id}
+                            </span>
+                            </div>
+                            <h4 className="font-bold text-[10px] md:text-[11px] leading-tight line-clamp-2" title={candidate.name}>
+                            {candidate.name}
+                            </h4>
+                        </div>
+
+                        {/* Kontrol Swara Compact */}
+                        <div className="flex items-center justify-between bg-slate-50 p-1 rounded border mb-1">
+                            <button 
+                            onClick={() => handleRemoveVote(candidate.id)}
+                            disabled={candidate.votes === 0}
+                            className="p-1 rounded bg-white border shadow-sm text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                            >
+                            <Minus size={14} />
+                            </button>
+                            <span className="text-lg font-black leading-none">{candidate.votes}</span>
+                            <button 
+                            onClick={() => handleAddVote(candidate.id)}
+                            className="p-1 rounded bg-white border shadow-sm text-green-600 hover:bg-green-50 transition-colors"
+                            >
+                            <Plus size={14} />
+                            </button>
+                        </div>
+
+                        {/* Tampilan Turus */}
+                        <TurusDisplay votes={candidate.votes} />
+                        </div>
+                    ))}
+
+                    {/* Slot ke-8: Status Pemimpin Sauntara */}
+                    <div className="bg-amber-50 rounded-lg shadow-sm p-3 border border-amber-200 flex flex-col h-full overflow-hidden">
+                        <div className="flex items-center gap-1.5 text-amber-800 font-bold mb-2 pb-1 border-b border-amber-200">
+                        <Trophy size={16} />
+                        <span className="text-sm">Unggul Sementara</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                        {totalVotes > 0 ? (
+                            <ul className="space-y-1.5">
+                            {leaders.map(l => (
+                                <li key={`leader-${l.id}`} className="text-xs font-semibold text-amber-900 flex items-start gap-1.5 leading-tight">
+                                <span className={`flex-shrink-0 mt-0.5 w-2 h-2 rounded-full ${l.color}`}></span>
+                                <span>0{l.id}. {l.name} ({l.votes})</span>
+                                </li>
+                            ))}
+                            </ul>
+                        ) : (
+                            <span className="text-xs text-amber-600/70 italic">Belum ada suara masuk</span>
+                        )}
+                        </div>
+                    </div>
+                    </div>
+
+                    {/* Kolom Kanan: Diagram Batang */}
+                    <div className="w-1/4 bg-white rounded-lg shadow-sm p-3 border border-slate-100 flex flex-col h-full">
+                    <h3 className="text-sm font-bold flex items-center gap-1.5 mb-2 pb-2 border-b">
+                        Diagram Hasil Suara
+                    </h3>
+                    
+                    <div className="flex-1 flex flex-col justify-between py-1">
+                        {candidates.map(c => {
+                        const percentageMax = maxVotes === 0 ? 0 : (c.votes / maxVotes) * 100;
+                        const percentageTotal = totalVotes === 0 ? 0 : (c.votes / totalVotes) * 100;
+                        const isLeader = maxVotes > 0 && c.votes === maxVotes;
+                        
+                        return (
+                            <div key={`chart-${c.id}`} className="group relative w-full">
+                            <div className="flex items-center justify-between text-[10px] md:text-xs mb-0.5 font-semibold">
+                                <div className="flex items-center gap-1.5 truncate pr-2">
+                                <img src={c.image} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                <span className="truncate">0{c.id}. {c.name.split('&')[0].trim()}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-500 font-mono">{percentageTotal.toFixed(1)}%</span>
+                                <span className={`${isLeader ? c.textCol : 'text-slate-600'} font-bold w-4 text-right`}>{c.votes}</span>
+                                </div>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3 md:h-4 overflow-hidden border border-slate-200 shadow-inner">
+                                <div 
+                                className={`h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end ${c.color} ${isLeader ? 'animate-pulse' : ''}`} 
+                                style={{ width: `${percentageMax}%` }}
+                                >
+                                </div>
+                            </div>
+                            </div>
+                        );
+                        })}
+                    </div>
+                    </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
-      {/* Modal Konfirmasi Reset */}
-      {showResetModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-3">
-              <AlertTriangle className="text-red-500" size={24} />
-            </div>
-            <h3 className="text-lg font-bold text-center text-slate-900 mb-2">Reset Semua Suara?</h3>
-            <p className="text-sm text-center text-slate-500 mb-5">
-              Tindakan ini akan mengembalikan semua perolehan suara menjadi 0. Apakah Anda yakin?
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowResetModal(false)}
-                className="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors text-sm"
-              >
-                Batal
-              </button>
-              <button 
-                onClick={handleReset}
-                className="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-red-200 text-sm"
-              >
-                Ya, Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Modal Konfirmasi Reset */}
+                {showResetModal && (
+                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-3">
+                        <AlertTriangle className="text-red-500" size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-center text-slate-900 mb-2">Reset Semua Suara?</h3>
+                        <p className="text-sm text-center text-slate-500 mb-5">
+                        Tindakan ini akan mengembalikan semua perolehan suara menjadi 0. Apakah Anda yakin?
+                        </p>
+                        <div className="flex gap-3">
+                        <button 
+                            onClick={() => setShowResetModal(false)}
+                            className="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors text-sm"
+                        >
+                            Batal
+                        </button>
+                        <button 
+                            onClick={handleReset}
+                            className="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-red-200 text-sm"
+                        >
+                            Ya, Reset
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
 
-      {/* Modal Konfirmasi Selesai */}
-      {showFinishModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-3">
-              <CheckCircle className="text-green-500" size={24} />
-            </div>
-            <h3 className="text-lg font-bold text-center text-slate-900 mb-2">Akhiri Pemilihan?</h3>
-            <p className="text-sm text-center text-slate-500 mb-5">
-              Anda akan mengakhiri proses perhitungan suara dan mengumumkan pemenangnya. Lanjutkan?
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowFinishModal(false)}
-                className="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors text-sm"
-              >
-                Batal
-              </button>
-              <button 
-                onClick={handleFinish}
-                className="flex-1 py-2 px-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-green-200 text-sm"
-              >
-                Ya, Akhiri
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Modal Konfirmasi Selesai */}
+                {showFinishModal && (
+                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-3">
+                        <CheckCircle className="text-green-500" size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-center text-slate-900 mb-2">Akhiri Pemilihan?</h3>
+                        <p className="text-sm text-center text-slate-500 mb-5">
+                        Anda akan mengakhiri proses perhitungan suara dan mengumumkan pemenangnya. Lanjutkan?
+                        </p>
+                        <div className="flex gap-3">
+                        <button 
+                            onClick={() => setShowFinishModal(false)}
+                            className="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors text-sm"
+                        >
+                            Batal
+                        </button>
+                        <button 
+                            onClick={handleFinish}
+                            className="flex-1 py-2 px-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-green-200 text-sm"
+                        >
+                            Ya, Akhiri
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
 
-      {/* Layar Pemenang / Selesai */}
-      {isFinished && (
-        <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 z-[60] animate-in fade-in duration-500">
-          <PartyPopper size={64} className="text-yellow-400 mb-4 animate-bounce" />
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-2 text-center drop-shadow-lg">
-            SELAMAT & SUKSES!
-          </h1>
-          <p className="text-lg md:text-xl text-slate-300 mb-8 text-center max-w-2xl">
-            Kepada Ketua dan Wakil Ketua OSIS SMP Negeri Suator Terpilih<br/>Periode 2026 - 2027
-          </p>
+                {/* Layar Pemenang / Selesai */}
+                {isFinished && (
+                    <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 z-[60] animate-in fade-in duration-500">
+                    <PartyPopper size={64} className="text-yellow-400 mb-4 animate-bounce" />
+                    <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-2 text-center drop-shadow-lg">
+                        SELAMAT & SUKSES!
+                    </h1>
+                    <p className="text-lg md:text-xl text-slate-300 mb-8 text-center max-w-2xl">
+                        Kepada Ketua dan Wakil Ketua OSIS SMP Negeri Suator Terpilih<br/>Periode 2026 - 2027
+                    </p>
 
-          <div className="flex gap-6 justify-center flex-wrap max-w-5xl">
-            {leaders.map(l => (
-              <div key={`winner-${l.id}`} className="bg-white p-6 rounded-2xl flex flex-col items-center max-w-sm text-center shadow-2xl scale-105 transform transition-transform border-4 border-yellow-400 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300"></div>
-                <img 
-                  src={l.image} 
-                  alt={l.name} 
-                  className="w-32 h-32 rounded-full border-4 border-slate-100 mb-4 object-cover shadow-md"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Foto'; }}
-                />
-                <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
-                  Paslon 0{l.id}
-                </span>
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight mb-2">{l.name}</h2>
-                <div className="bg-slate-50 w-full p-3 rounded-lg border border-slate-100 mt-2">
-                  <p className="text-slate-500 text-sm">Perolehan Akhir</p>
-                  <p className="text-3xl font-black text-blue-600">
-                    {l.votes} <span className="text-base font-semibold text-slate-500">Suara</span>
-                  </p>
-                  <p className="text-sm font-bold text-slate-400 mt-1">
-                    ({((l.votes / totalVotes) * 100).toFixed(1)}%)
-                  </p>
+                    <div className="flex gap-6 justify-center flex-wrap max-w-5xl">
+                        {leaders.map(l => (
+                        <div key={`winner-${l.id}`} className="bg-white p-6 rounded-2xl flex flex-col items-center max-w-sm text-center shadow-2xl scale-105 transform transition-transform border-4 border-yellow-400 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300"></div>
+                            <img 
+                            src={l.image} 
+                            alt={l.name} 
+                            className="w-32 h-32 rounded-full border-4 border-slate-100 mb-4 object-cover shadow-md"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Foto'; }}
+                            />
+                            <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
+                            Paslon 0{l.id}
+                            </span>
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight mb-2">{l.name}</h2>
+                            <div className="bg-slate-50 w-full p-3 rounded-lg border border-slate-100 mt-2">
+                            <p className="text-slate-500 text-sm">Perolehan Akhir</p>
+                            <p className="text-3xl font-black text-blue-600">
+                                {l.votes} <span className="text-base font-semibold text-slate-500">Suara</span>
+                            </p>
+                            <p className="text-sm font-bold text-slate-400 mt-1">
+                                ({((l.votes / totalVotes) * 100).toFixed(1)}%)
+                            </p>
+                            </div>
+                        </div>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={() => setIsFinished(false)} 
+                        className="mt-10 px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm transition-colors border border-white/20 text-sm"
+                    >
+                        Tutup & Lihat Detail Grafik
+                    </button>
+                    </div>
+                )}
+
                 </div>
-              </div>
-            ))}
-          </div>
+            );
+        }
 
-          <button 
-            onClick={() => setIsFinished(false)} 
-            className="mt-10 px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm transition-colors border border-white/20 text-sm"
-          >
-            Tutup & Lihat Detail Grafik
-          </button>
-        </div>
-      )}
-
-    </div>
-  );
-}
+        // Melakukan render aplikasi React ke dalam HTML
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
